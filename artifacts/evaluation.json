@@ -1,0 +1,98 @@
+{
+  "threshold": 0.4,
+  "accuracy": 0.7892122072391767,
+  "precision": 0.5914489311163895,
+  "recall": 0.6657754010695187,
+  "f1": 0.6264150943396226,
+  "roc_auc": 0.8464310625435946,
+  "pr_auc": 0.6596956052610617,
+  "brier_score": 0.13528105993290962,
+  "classification_report": {
+    "0": {
+      "precision": 0.8734817813765182,
+      "recall": 0.8338164251207729,
+      "f1-score": 0.8531883341571923,
+      "support": 1035.0
+    },
+    "1": {
+      "precision": 0.5914489311163895,
+      "recall": 0.6657754010695187,
+      "f1-score": 0.6264150943396226,
+      "support": 374.0
+    },
+    "accuracy": 0.7892122072391767,
+    "macro avg": {
+      "precision": 0.7324653562464538,
+      "recall": 0.7497959130951458,
+      "f1-score": 0.7398017142484075,
+      "support": 1409.0
+    },
+    "weighted avg": {
+      "precision": 0.7986199744231555,
+      "recall": 0.7892122072391767,
+      "f1-score": 0.7929944436733235,
+      "support": 1409.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      863,
+      172
+    ],
+    [
+      125,
+      249
+    ]
+  ],
+  "best_params": {
+    "model__colsample_bytree": 0.8628088249474745,
+    "model__learning_rate": 0.029092422497476265,
+    "model__max_depth": 4,
+    "model__min_child_weight": 5,
+    "model__n_estimators": 264,
+    "model__subsample": 0.7046909220223582
+  },
+  "best_cv_recall": 0.5317725752508361,
+  "calibration": [
+    {
+      "mean_predicted": 0.009878365213962946,
+      "observed_rate": 0.0070921985815602835
+    },
+    {
+      "mean_predicted": 0.01890512820042617,
+      "observed_rate": 0.014184397163120567
+    },
+    {
+      "mean_predicted": 0.04125463188434324,
+      "observed_rate": 0.04964539007092199
+    },
+    {
+      "mean_predicted": 0.08031251403034156,
+      "observed_rate": 0.09929078014184398
+    },
+    {
+      "mean_predicted": 0.1357701117476673,
+      "observed_rate": 0.1773049645390071
+    },
+    {
+      "mean_predicted": 0.22113173103758266,
+      "observed_rate": 0.21428571428571427
+    },
+    {
+      "mean_predicted": 0.3407941921382931,
+      "observed_rate": 0.3191489361702128
+    },
+    {
+      "mean_predicted": 0.45380813432923445,
+      "observed_rate": 0.4397163120567376
+    },
+    {
+      "mean_predicted": 0.5810521633912485,
+      "observed_rate": 0.5815602836879432
+    },
+    {
+      "mean_predicted": 0.7869741561564993,
+      "observed_rate": 0.75177304964539
+    }
+  ]
+}

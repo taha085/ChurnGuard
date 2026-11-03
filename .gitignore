@@ -1,0 +1,39 @@
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Google Colab configuration
+.config/
+
+# MLflow local database and runs
+mlflow.db
+mlflow.db-*
+mlruns/
+
+# Temporary files
+*.log
+*.tmp
+*.zip
+.ipynb_checkpoints/
+
+# Raw datasets
+data/*.csv
+sample_data/
+
+# Temporary logs
+logs/*
+!logs/.gitkeep
+
+# Keep trained model artifacts and evaluation outputs
+# Keep SHAP plots

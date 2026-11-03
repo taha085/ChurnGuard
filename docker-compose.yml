@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      CHURNGUARD_API_KEY: ${CHURNGUARD_API_KEY}
+      MODEL_PATH: /app/artifacts/churnguard_xgb_2026-11-03_v1.joblib
+  frontend:
+    build: .
+    command: streamlit run app/streamlit_app.py --server.address 0.0.0.0
+    ports: ["8501:8501"]
+    environment:
+      API_URL: http://api:8000
+    depends_on: [api]
