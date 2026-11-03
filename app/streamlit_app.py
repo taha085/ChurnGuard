@@ -1,29 +1,48 @@
 
+import sys
 import os
-import requests
+from pathlib import Path
+
 import streamlit as st
 import pandas as pd
+import numpy as np
+import joblib
 
+# Project root
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from src.features import engineer_features
+
+# Page configuration
 st.set_page_config(
     page_title="ChurnGuard",
     page_icon="🛡️",
     layout="wide"
 )
 
-API_URL = os.getenv(
-    "CHURNGUARD_API_URL",
-    "http://127.0.0.1:8000"
-)
+# Load trained model
+MODEL_PATH = ROOT / "artifacts/churnguard_logistic_2026-11-03_v1.joblib"
 
-API_KEY = os.getenv("CHURNGUARD_API_KEY", "")
+@st.cache_resource
+def load_model():
+    return joblib.load(MODEL_PATH)
 
+try:
+    model = load_model()
+except Exception as e:
+    st.error(f"Model loading failed: {e}")
+    st.stop()
+
+# Dashboard heading
 st.title("🛡️ ChurnGuard")
 st.subheader("Customer Churn Prediction Dashboard")
 
 st.write(
-    "Enter customer details below to estimate their likelihood of leaving."
+    "Enter customer details to estimate their likelihood of leaving."
 )
 
+# Customer form
 with st.form("customer_form"):
 
     st.header("Customer Information")
@@ -36,11 +55,12 @@ with st.form("customer_form"):
         partner = st.selectbox("Partner", ["Yes", "No"])
         dependents = st.selectbox("Dependents", ["Yes", "No"])
         tenure = st.number_input(
-            "Tenure (months)", min_value=0, max_value=100, value=12
+            "Tenure (months)", 0, 100, 12
         )
         phone = st.selectbox("Phone Service", ["Yes", "No"])
         multiple_lines = st.selectbox(
-            "Multiple Lines", ["No", "Yes", "No phone service"]
+            "Multiple Lines",
+            ["No", "Yes", "No phone service"]
         )
 
     with col2:
@@ -48,22 +68,28 @@ with st.form("customer_form"):
             "Internet Service", ["DSL", "Fiber optic", "No"]
         )
         security = st.selectbox(
-            "Online Security", ["Yes", "No", "No internet service"]
+            "Online Security",
+            ["Yes", "No", "No internet service"]
         )
         backup = st.selectbox(
-            "Online Backup", ["Yes", "No", "No internet service"]
+            "Online Backup",
+            ["Yes", "No", "No internet service"]
         )
         protection = st.selectbox(
-            "Device Protection", ["Yes", "No", "No internet service"]
+            "Device Protection",
+            ["Yes", "No", "No internet service"]
         )
         support = st.selectbox(
-            "Tech Support", ["Yes", "No", "No internet service"]
+            "Tech Support",
+            ["Yes", "No", "No internet service"]
         )
         streaming_tv = st.selectbox(
-            "Streaming TV", ["Yes", "No", "No internet service"]
+            "Streaming TV",
+            ["Yes", "No", "No internet service"]
         )
         streaming_movies = st.selectbox(
-            "Streaming Movies", ["Yes", "No", "No internet service"]
+            "Streaming Movies",
+            ["Yes", "No", "No internet service"]
         )
 
     with col3:
@@ -95,6 +121,7 @@ with st.form("customer_form"):
         use_container_width=True
     )
 
+# Prediction
 if submitted:
 
     customer = {
@@ -120,65 +147,82 @@ if submitted:
     }
 
     try:
-        response = requests.post(
-            f"{API_URL}/predict",
-            json=customer,
-            headers={"X-API-Key": API_KEY},
-            timeout=30
+        # Feature engineering
+        input_df = pd.DataFrame([customer])
+        engineered = engineer_features(input_df)
+
+        # Predict probability
+        probability = float(model.predict_proba(engineered)[0, 1])
+
+        threshold = 0.40
+        risk = "HIGH-RISK" if probability >= threshold else "LOW-RISK"
+
+        # Transform features for coefficient explanations
+        prep = model.named_steps["prep"]
+        classifier = model.named_steps["model"]
+
+        transformed = prep.transform(engineered)
+
+        if hasattr(transformed, "toarray"):
+            transformed = transformed.toarray()
+
+        feature_names = prep.get_feature_names_out()
+        contributions = transformed[0] * classifier.coef_[0]
+
+        driver_df = pd.DataFrame({
+            "feature": feature_names,
+            "contribution": contributions
+        })
+
+        driver_df = driver_df.reindex(
+            driver_df["contribution"].abs().sort_values(
+                ascending=False
+            ).index
+        ).head(3)
+
+        driver_df["direction"] = np.where(
+            driver_df["contribution"] > 0,
+            "increases risk",
+            "reduces risk"
         )
 
-        if response.status_code == 200:
+        driver_df["contribution"] = driver_df[
+            "contribution"
+        ].round(4)
 
-            result = response.json()
+        # Results
+        st.divider()
+        st.header("Prediction Results")
 
-            st.divider()
-            st.header("Prediction Results")
+        c1, c2 = st.columns(2)
 
-            probability = result["churn_probability"]
-            risk = result["risk_label"]
+        c1.metric(
+            "Churn Probability",
+            f"{probability * 100:.2f}%"
+        )
 
-            col1, col2 = st.columns(2)
+        c2.metric("Risk Classification", risk)
 
-            with col1:
-                st.metric(
-                    "Churn Probability",
-                    f"{probability * 100:.2f}%"
-                )
+        st.progress(probability)
 
-            with col2:
-                st.metric(
-                    "Risk Classification",
-                    risk.upper()
-                )
-
-            st.progress(min(max(probability, 0.0), 1.0))
-
-            st.subheader("Top Risk Drivers")
-
-            drivers = result.get("top_drivers", [])
-
-            if drivers:
-                driver_df = pd.DataFrame(drivers)
-                st.dataframe(
-                    driver_df,
-                    use_container_width=True,
-                    hide_index=True
-                )
-            else:
-                st.info("No driver explanations returned.")
-
-            st.caption(
-                "This prediction is a decision-support estimate, "
-                "not a guarantee that a customer will churn."
-            )
-
+        if risk == "HIGH-RISK":
+            st.warning("This customer has elevated churn risk.")
         else:
-            st.error(
-                f"API Error {response.status_code}: {response.text}"
-            )
+            st.success("This customer has relatively lower churn risk.")
 
-    except requests.exceptions.RequestException as e:
-        st.error(
-            "Could not connect to FastAPI. Make sure the API server is running."
+        st.subheader("Top Risk Drivers")
+
+        st.dataframe(
+            driver_df,
+            use_container_width=True,
+            hide_index=True
         )
-        st.code(str(e))
+
+        st.caption(
+            "Risk threshold: 40%. Driver contributions are "
+            "Logistic Regression coefficient-based explanations, "
+            "not SHAP values. This is a decision-support estimate."
+        )
+
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
